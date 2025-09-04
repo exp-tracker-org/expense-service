@@ -1,4 +1,4 @@
-name: Frontend CI/CD
+name: Expense Service CI/CD
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
       - name: Build and Push Docker Image
         id: build
         run: |
-          IMAGE=${{ secrets.DOCKER_USERNAME }}/frontend:latest
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/expense-service:latest
           docker build -t $IMAGE .
           docker push $IMAGE
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
@@ -42,14 +42,18 @@ jobs:
 
       - name: Update Deployment YAML
         run: |
-          sed -i "s|image: .*/frontend:.*|image: ${{ needs.build-and-push.outputs.image }}|" infra/k8s/frontend.yaml
+          sed -i "s|image: .*/expense-service:.*|image: ${{ needs.build-and-push.outputs.image }}|" infra/k8s/expense-service.yaml
 
       - name: Commit & Push to Infra
         run: |
           cd infra
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add k8s/frontend.yaml
-          git commit -m "Update frontend image to latest"
+          git add k8s/expense-service.yaml
+          git commit -m "Update expense-service image to latest"
           git push origin main
+
+      - name: Run DB Init
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u ${{ secrets.MYSQL_USER }} -p${{ secrets.MYSQL_PASSWORD }} ${{ secrets.MYSQL_DATABASE }} < db-init/init.sql
 
