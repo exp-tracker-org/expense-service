@@ -6,10 +6,70 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  lint-test-scan:
+    name: Lint, Test, SAST & SCA
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.get_sha.outputs.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install tools
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Get commit SHA
+        id: get_sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Run Lint
+        run: |
+          golangci-lint run ./... || echo "Lint warnings present"
+
+      - name: Run Unit Tests
+        run: |
+          mkdir -p reports
+          go test ./... -v -json > reports/test-results.json || true
+
+      - name: Run SAST (gosec)
+        run: |
+          gosec ./... || true
+
+      - name: Run SCA (govulncheck)
+        run: |
+          govulncheck ./... || true
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: reports/
+
+  build-and-deploy:
+    name: Build & Deploy Docker Image
+    needs: lint-test-scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Log in to DockerHub
         uses: docker/login-action@v2
@@ -20,7 +80,7 @@ jobs:
       - name: Build & Push Docker Image
         run: |
           IMAGE=minnuantony/expense-service
-          SHA_TAG=$IMAGE:sha-${GITHUB_SHA}
+          SHA_TAG=$IMAGE:sha-${{ needs.lint-test-scan.outputs.sha }}
           LATEST_TAG=$IMAGE:latest
           docker build -t $SHA_TAG -t $LATEST_TAG .
           docker push $SHA_TAG
@@ -28,9 +88,9 @@ jobs:
 
       - name: Update Deployment Manifest
         run: |
-          sed -i "s|image: .*|image: minnuantony/expense-service:sha-${GITHUB_SHA}|" ./k8s/deployment.yaml
+          sed -i "s|image: .*|image: minnuantony/expense-service:sha-${{ needs.lint-test-scan.outputs.sha }}|" ./k8s/deployment.yaml
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add ./k8s/deployment.yaml
-          git commit -m "Update expense-service image to sha-${GITHUB_SHA}" || echo "No changes to commit"
+          git commit -m "Update expense-service image to sha-${{ needs.lint-test-scan.outputs.sha }}" || echo "No changes to commit"
           git push
