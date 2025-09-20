@@ -20,6 +20,10 @@ jobs:
         with:
           go-version: "1.21"
 
+      # Clean module cache first to prevent tar "file exists" errors
+      - name: Clean Go module cache
+        run: rm -rf ~/go/pkg/mod ~/.cache/go-build
+
       - name: Cache Go modules
         uses: actions/cache@v3
         with:
@@ -34,9 +38,6 @@ jobs:
         run: |
           go mod tidy
           go mod download
-
-      - name: Install tools
-        run: |
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
           go install github.com/securego/gosec/v2/cmd/gosec@latest
           go install golang.org/x/vuln/cmd/govulncheck@latest
@@ -46,8 +47,7 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Run Lint
-        run: |
-          golangci-lint run ./... || echo "Lint warnings present"
+        run: golangci-lint run ./... || echo "Lint warnings present"
 
       - name: Run Unit Tests
         run: |
@@ -55,12 +55,10 @@ jobs:
           go test ./... -v -json > reports/test-results.json || true
 
       - name: Run SAST (gosec)
-        run: |
-          gosec ./... || true
+        run: gosec ./... || true
 
       - name: Run SCA (govulncheck)
-        run: |
-          govulncheck ./... || true
+        run: govulncheck ./... || true
 
       - name: Upload reports
         uses: actions/upload-artifact@v4
