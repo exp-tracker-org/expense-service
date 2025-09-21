@@ -44,11 +44,7 @@ jobs:
       - name: Dependency Review (GitHub native)
         uses: actions/dependency-review-action@v4
 
-      - name: Generate SBOM (Syft)
-        uses: anchore/syft-action@v0.16.0
-        with:
-          image: docker.io/minnuantony/expense-service:latest
-          format: table
+     
 
       # ------------------------
       # 4. Docker Build & Push
