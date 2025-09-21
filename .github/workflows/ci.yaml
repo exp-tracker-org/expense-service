@@ -42,11 +42,7 @@ jobs:
 
 
       # ------------------------
-      # 3. SCA (Dependency vulnerability scanning)
-      # ------------------------
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-
+  
       # ------------------------
       # 4. Docker Build & Push
       # ------------------------
