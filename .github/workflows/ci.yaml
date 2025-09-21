@@ -1,4 +1,3 @@
-
 name: CI - Expense Service
 
 on:
@@ -31,19 +30,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Install tools
+      - name: Install tools & download dependencies
         run: |
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
           go install github.com/securego/gosec/v2/cmd/gosec@latest
           go install golang.org/x/vuln/cmd/govulncheck@latest
+          go mod tidy
 
       - name: Get commit SHA
         id: get_sha
         run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Run Lint
-        run: |
-          golangci-lint run ./... || echo "Lint warnings present"
+        run: golangci-lint run ./... || echo "Lint warnings present"
 
       - name: Run Unit Tests
         run: |
@@ -51,18 +50,17 @@ jobs:
           go test ./... -v -json > reports/test-results.json || true
 
       - name: Run SAST (gosec)
-        run: |
-          gosec ./... || true
+        run: gosec ./... || true
 
       - name: Run SCA (govulncheck)
-        run: |
-          govulncheck ./... || true
+        run: govulncheck ./... || true
 
       - name: Upload reports
         uses: actions/upload-artifact@v4
         with:
           name: reports
           path: reports/
+
 
   build-and-deploy:
     name: Build & Deploy Docker Image
