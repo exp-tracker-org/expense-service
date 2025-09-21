@@ -22,11 +22,7 @@ jobs:
         with:
           go-version: "1.21"
 
-      # Step 3: Clean Go module cache to prevent tar restore conflicts
-      - name: Clean Go module cache
-        run: rm -rf ~/go/pkg/mod
-
-      # Step 4: Cache Go modules and Go build cache for faster runs
+      # Step 3: Cache Go modules and Go build cache for faster runs
       - name: Cache Go modules
         uses: actions/cache@v3
         with:
@@ -37,7 +33,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      # Step 5: Install linting, SAST & SCA tools, and download dependencies
+      # Step 4: Install linting, SAST & SCA tools, and download dependencies
       - name: Install tools & download dependencies
         run: |
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
@@ -45,30 +41,30 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           go mod tidy
 
-      # Step 6: Get the commit SHA for tagging Docker images
+      # Step 5: Get the commit SHA for tagging Docker images
       - name: Get commit SHA
         id: get_sha
         run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
-      # Step 7: Run Go linter
+      # Step 6: Run Go linter
       - name: Run Lint
         run: golangci-lint run ./... || echo "Lint warnings present"
 
-      # Step 8: Run unit tests and generate JSON report
+      # Step 7: Run unit tests and generate JSON report
       - name: Run Unit Tests
         run: |
           mkdir -p reports
           go test ./... -v -json > reports/test-results.json
 
-      # Step 9: Run SAST (gosec)
+      # Step 8: Run SAST (gosec)
       - name: Run SAST (gosec)
         run: gosec ./...
 
-      # Step 10: Run SCA (govulncheck)
+      # Step 9: Run SCA (govulncheck)
       - name: Run SCA (govulncheck)
         run: govulncheck ./...
 
-      # Step 11: Upload all reports as artifacts
+      # Step 10: Upload all reports as artifacts
       - name: Upload reports
         uses: actions/upload-artifact@v4
         with:
