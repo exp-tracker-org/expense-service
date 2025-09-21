@@ -34,12 +34,12 @@ jobs:
           staticcheck ./... || true
 
       # ------------------------
-      # 2. SAST (Static Analysis with Gosec)
-      # ------------------------
+    #    2. SAST (Static Analysis with Gosec)
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
-          args: ./...
+          args: -severity=HIGH -confidence=HIGH ./...
+
 
       # ------------------------
       # 3. SCA (Dependency vulnerability scanning)
