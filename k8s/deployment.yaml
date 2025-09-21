@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: expense-service
-          image: minnuantony/expense-service:sha-b09b31c554d68d488bbf64ab39b212bd1696a397
+          image: minnuantony/expense-service:sha-f472dcd2a0decfb95628dc81cf60f139ab841c59
           ports:
             - containerPort: 8080
           resources:
