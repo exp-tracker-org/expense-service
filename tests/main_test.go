@@ -1,12 +1,12 @@
-package main
+// package main
 
-import (
-	"net/http"
-	"net/http/httptest"
-	"testing"
+// import (
+// 	"net/http"
+// 	"net/http/httptest"
+// 	"testing"
 
-	"github.com/gorilla/mux"
-)
+// 	"github.com/gorilla/mux"
+// )
 
 // func TestRouterSetup(t *testing.T) {
 // 	r := mux.NewRouter()
