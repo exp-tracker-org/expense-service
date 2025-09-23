@@ -34,17 +34,15 @@ jobs:
           staticcheck ./... || true
 
       # ------------------------
-    #    2. SAST (Static Analysis with Gosec)
+      # 2. SAST (Static Analysis with Gosec)
+      # ------------------------
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
           args: -severity=HIGH -confidence=HIGH ./...
 
-
       # ------------------------
-  
-      # ------------------------
-      # 4. Docker Build & Push
+      # 3. Docker Build (no push yet)
       # ------------------------
       - name: Log in to DockerHub
         uses: docker/login-action@v2
@@ -52,17 +50,36 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build & Push Docker Image
+      - name: Build Docker Image
         run: |
           IMAGE=minnuantony/expense-service
           SHA_TAG=$IMAGE:sha-${GITHUB_SHA}
           LATEST_TAG=$IMAGE:latest
           docker build -t $SHA_TAG -t $LATEST_TAG .
-          docker push $SHA_TAG
-          docker push $LATEST_TAG
+          echo "SHA_TAG=$SHA_TAG" >> $GITHUB_ENV
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
 
       # ------------------------
-      # 5. Update Deployment Manifest
+      # 4. Trivy Scan (before pushing)
+      # ------------------------
+      - name: Scan Docker Image with Trivy
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: ${{ env.SHA_TAG }}
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'   # change to '1' if you want pipeline to fail on vulnerabilities
+
+      # ------------------------
+      # 5. Push Docker Images
+      # ------------------------
+      - name: Push Docker Images
+        run: |
+          docker push ${{ env.SHA_TAG }}
+          docker push ${{ env.LATEST_TAG }}
+
+      # ------------------------
+      # 6. Update Deployment Manifest
       # ------------------------
       - name: Update Deployment Manifest
         run: |
